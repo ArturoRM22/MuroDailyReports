@@ -22,7 +22,7 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(Branch)
 class BranchAdmin(admin.ModelAdmin):
-    list_display = ("name", "is_active")
+    list_display = ("id", "name", "is_active")
 
 
 # --------------------------------------------------------------------------

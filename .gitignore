@@ -2,4 +2,6 @@
 README.md
 migrations.md
 branch-settings.md
-__pycache__
+__pycache__/
+*.py[cod]
+*.pyc

@@ -11,5 +11,6 @@ urlpatterns = [
     path("users/<int:pk>/", views.UserDetail.as_view(), name="user-detail"),
     path("branch_settings/", views.BranchSettingsList.as_view(), name="branch_settings-list"),
     path("reports/", views.ReportList.as_view(), name="daily_reports-list"),
+    path("reports/<int:pk>/", views.ReportDetail.as_view(), name="daily_reports-detail"),
     path("api-token-auth/", obtain_auth_token),
 ]

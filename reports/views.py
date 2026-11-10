@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.utils import timezone
 
 from .models import Branch, User, BranchSettings, DailyReport
 from .permissions import scoped_branches
@@ -175,4 +176,48 @@ class ReportList(APIView):
         obj = ser.save(created_by=request.user)
         return Response(DailyReportSerializer(obj, context={"request": request}).data,
                         status=status.HTTP_201_CREATED)
+
+class ReportDetail(APIView):
+    def get(self, request, pk):
+        # The scope filter is part of the lookup: an id from another branch
+        # is simply "not found" -- never leaked.
+        obj = get_object_or_404(
+            DailyReport.objects.filter(branch__in=scoped_branches(request.user)), pk=pk
+        )
+        return Response(DailyReportSerializer(obj, context={"request": request}).data)
+    
+    def patch(self, request, pk):
+        obj = get_object_or_404(DailyReport.objects.filter(branch__in=scoped_branches(request.user)), pk=pk)
+
+        # Locked before we even look at the body: editing a closed report
+        # (or re-opening it) is forbidden, whatever the payload says.
+        if obj.status == DailyReport.Status.CLOSED:
+            return Response({"detail": "Este reporte está cerrado."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        ser = DailyReportSerializer(
+            obj, data=request.data, partial=True, context={"request": request}
+        )
+        ser.is_valid(raise_exception=True)
+
+        # Closing stamps closed_at. save() kwargs are merged into
+        # validated_data, so ModelSerializer.update() sets the field for us
+        # even though it's read-only.
+        if ser.validated_data.get("status") == DailyReport.Status.CLOSED:
+            obj = ser.save(closed_at=timezone.now())
+        else:
+            obj = ser.save()
+
+        return Response(DailyReportSerializer(obj, context={"request": request}).data)
+
+    def delete(self, request, pk):
+        if(request.user.role != "owner"):
+            return Response({"detail": "Solo el dueño puede eliminar reportes."}, status=status.HTTP_403_FORBIDDEN)
+
+        obj = get_object_or_404(DailyReport.objects.all(), pk=pk)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
         

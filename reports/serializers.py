@@ -171,3 +171,4 @@ class DailyReportSerializer(serializers.ModelSerializer):
             instance.branch_settings = row
 
         return super().update(instance, validated_data)
+
